@@ -23,7 +23,8 @@ typedef enum VIPCardType {
 @property (nonatomic,strong)NSArray *array;//折扣数组
 @property (nonatomic,strong)NSMutableArray *dataArray;//商品数组
 @property (nonatomic,strong)NSMutableArray *payTypesArray;//支付类型数组
-
+@property (strong, nonatomic) UIDocumentInteractionController *documentController;
+@property (nonatomic,copy)NSString *logs;
 @end
 
 @implementation ViewController
@@ -53,15 +54,15 @@ typedef enum VIPCardType {
 - (void)viewDidLoad {
     [super viewDidLoad];
     // Do any additional setup after loading the view, typically from a nib.
-    NSLog(@"方鼎银行贵金属购买凭证\n");
+//    NSLog(@"方鼎银行贵金属购买凭证\n");
+//    [self writeToFileWithTxt:@"方鼎银行贵金属购买凭证\n"];
     //读取数据
     NSDictionary *dic  = [self readLocalFileWithName:@"profile"];
     Model *demo = [[Model alloc]init];
     [demo setValuesForKeysWithDictionary:dic];
-    //根据客户卡号获取会员信息
-    vipNomalMessage *vipModel = [self messageWithMemberId:demo.memberId andIntegral:0];
-    NSLog(@"\n销售单号:%@ 日期:%@\n客户卡号:%@ 会员姓名:%@ 客户等级:%@ 累计积分:%@",demo.orderId,demo.createTime,demo.memberId,vipModel.name,vipModel.vipType,vipModel.integral);
-    NSLog(@"商品及数量          单价            金额 ");
+//    NSLog(@"商品及数量          单价            金额 ");
+    self.logs = @"商品及数量          单价            金额";
+//    [self writeToFileWithTxt:@"商品及数量          单价            金额"];
     //存储折扣券
     self.array = demo.discountCards;
     //获取支付类型
@@ -79,20 +80,56 @@ typedef enum VIPCardType {
     //计算总价
     CGFloat totalPrice = 0.00;
     for (itemsList *list in self.dataArray) {
-        NSLog(@"(%@)%@x%@,%@,%.2f\n",list.product,[self CommodityName:list.product],list.amount,[NSString stringWithFormat:@"%.2f",[self CommodityPrices:list.product]],[list.amount integerValue]*[self CommodityPrices:list.product]);
+//        NSLog(@"(%@)%@x%@,%@,%.2f\n",list.product,[self CommodityName:list.product],list.amount,[NSString stringWithFormat:@"%.2f",[self CommodityPrices:list.product]],[list.amount integerValue]*[self CommodityPrices:list.product]);
+//        [self writeToFileWithTxt:[NSString stringWithFormat:@"(%@)%@x%@,%@,%.2f",list.product,[self CommodityName:list.product],list.amount,[NSString stringWithFormat:@"%.2f",[self CommodityPrices:list.product]],[list.amount integerValue]*[self CommodityPrices:list.product]]];
+        self.logs = [NSString stringWithFormat:@"%@\n%@",self.logs,[NSString stringWithFormat:@"(%@)%@x%@,%@,%.2f",list.product,[self CommodityName:list.product],list.amount,[NSString stringWithFormat:@"%.2f",[self CommodityPrices:list.product]],[list.amount integerValue]*[self CommodityPrices:list.product]]];
         totalPrice += [list.amount integerValue]*[self CommodityPrices:list.product];
     }
-    NSLog(@"合计:%.2f\n",totalPrice);
-    NSLog(@"优惠清单:\n");
+//    NSLog(@"合计:%.2f\n",totalPrice);
+//    [self writeToFileWithTxt:[NSString stringWithFormat:@"合计:%.2f\n",totalPrice]];
+    self.logs = [NSString stringWithFormat:@"%@\n%@",self.logs,[NSString stringWithFormat:@"合计:%.2f\n",totalPrice]];
+
+//    NSLog(@"优惠清单:\n");
+//    [self writeToFileWithTxt:@"优惠清单:"];
+    self.logs = [NSString stringWithFormat:@"%@\n%@",self.logs,@"优惠清单:"];
+
     //计算总优惠
     CGFloat disTotal =  [self disCountTotal:self.dataArray];
-    NSLog(@"应收合计:%.2f",totalPrice - disTotal);
-    NSLog(@"收款:\n");
+//    NSLog(@"应收合计:%.2f",totalPrice - disTotal);
+//    [self writeToFileWithTxt:[NSString stringWithFormat:@"应收合计:%.2f",totalPrice - disTotal]];
+    self.logs = [NSString stringWithFormat:@"%@\n%@",self.logs,[NSString stringWithFormat:@"应收合计:%.2f",totalPrice - disTotal]];
+
+//    NSLog(@"收款:\n");
+//    [self writeToFileWithTxt:@"收款:"];
+    self.logs = [NSString stringWithFormat:@"%@\n%@",self.logs,@"收款:"];
+
     //输出打折券
-    for (NSString *str in self.array) {
-        NSLog(@"%@\n",str);
+//    for (NSString *str in self.array) {
+//        NSLog(@"%@\n",str);
+    if (self.array.count>0) {
+        switch (self.array.count) {
+            case 1:
+//                [self writeToFileWithTxt:[NSString stringWithFormat:@" %@",[self.array firstObject]]];
+                self.logs = [NSString stringWithFormat:@"%@\n %@",self.logs,[self.array firstObject]];
+
+                break;
+            case 2:
+//                [self writeToFileWithTxt:[NSString stringWithFormat:@" %@",[self.array firstObject]]];
+                self.logs = [NSString stringWithFormat:@"%@\n %@",self.logs,[self.array firstObject]];
+                self.logs = [NSString stringWithFormat:@"%@\n %@",self.logs,[self.array lastObject]];
+
+//                [self writeToFileWithTxt:[NSString stringWithFormat:@" %@",[self.array lastObject]]];
+                break;
+            default:
+                break;
+        }
     }
-    NSLog(@"余额支付:%.2f",totalPrice - disTotal);
+
+//    }
+//    NSLog(@"余额支付:%.2f",totalPrice - disTotal);
+//    [self writeToFileWithTxt:[NSString stringWithFormat:@" 余额支付:%.2f\n",totalPrice - disTotal]];
+    self.logs = [NSString stringWithFormat:@"%@\n%@",self.logs,[NSString stringWithFormat:@" 余额支付:%.2f\n",totalPrice - disTotal]];
+
     //获取商户信息
     vipNomalMessage *vipModelTwo = [self messageWithMemberId:demo.memberId andIntegral:0];
     //获取支付总积分
@@ -107,7 +144,13 @@ typedef enum VIPCardType {
     if (typeOne != typeTwo) {
         vipUpdate = [NSString stringWithFormat:@"恭喜您升级为%@客户!",[self vipTypeForIntegral:vipModelThree.integral]];
     }
-    NSLog(@"客户等级与积分：\n新增积分:%ld\n%@",(long)totalInter,vipUpdate);
+//    NSLog(@"客户等级与积分：\n新增积分:%ld\n%@",(long)totalInter,vipUpdate);
+//    [self writeToFileWithTxt:[NSString stringWithFormat:@"客户等级与积分：\n新增积分:%ld\n%@",(long)totalInter,vipUpdate]];
+    self.logs = [NSString stringWithFormat:@"%@\n%@\n",self.logs,[NSString stringWithFormat:@"客户等级与积分：\n新增积分:%ld\n%@",(long)totalInter,vipUpdate]];
+    //根据客户卡号获取会员信息
+    vipNomalMessage *vipModel = [self messageWithMemberId:demo.memberId andIntegral:totalInter];
+
+    [self writeToFileWithTxt:[NSString stringWithFormat:@"方鼎银行贵金属购买凭证\n\n销售单号:%@ 日期:%@\n客户卡号:%@ 会员姓名:%@ 客户等级:%@ 累计积分:%@\n\n%@",demo.orderId,demo.createTime,demo.memberId,vipModel.name,vipModel.vipType,vipModel.integral,self.logs]];
 }
 //读取本地文件 name:文件名
 - (NSDictionary *)readLocalFileWithName:(NSString *)name {
@@ -351,7 +394,7 @@ if ([disOne isEqualToString:@"95"] || [disTwo isEqualToString:@"95"]) {
     if ([memberId isEqualToString:@"6236609999"]) {
         model.name = @"马丁";
         model.cardNumber = @"6236609999";
-        model.integral = [NSString stringWithFormat:@"%ld",9860 + 1242 + addIntegral];
+        model.integral = [NSString stringWithFormat:@"%ld",9860  + addIntegral];
         model.vipType = [self vipTypeForIntegral:model.integral];
     }else if ([memberId isEqualToString:@"6630009999"]) {
         model.name = @"王立";
@@ -398,11 +441,43 @@ if ([disOne isEqualToString:@"95"] || [disTwo isEqualToString:@"95"]) {
       CGFloat disTotal =  [self payMoneyThisPro:model.product withNumbers:[model.amount integerValue] andDiscountCards:self.array];
 //        NSLog(@"原价格:%.2f,优惠后价格:%.2f",total,disTotal);
         if (total > disTotal) {
-            NSLog(@"(%@)%@:%.2f",model.product,[self CommodityName:model.product],-(total - disTotal));
+//            NSLog(@"(%@)%@:%.2f",model.product,[self CommodityName:model.product],-(total - disTotal));
             disTotalMoney += -(total - disTotal);
+//            [self writeToFileWithTxt:[NSString stringWithFormat:@"(%@)%@:%.2f",model.product,[self CommodityName:model.product],-(total - disTotal)]];
+            self.logs = [NSString stringWithFormat:@"%@\n%@",self.logs,[NSString stringWithFormat:@"(%@)%@:%.2f",model.product,[self CommodityName:model.product],-(total - disTotal)]];
+
         }
     }
-    NSLog(@"优惠合计:%.2f",-disTotalMoney);
+//    NSLog(@"优惠合计:%.2f",-disTotalMoney);
+//    [self writeToFileWithTxt:[NSString stringWithFormat:@"优惠合计:%.2f\n",-disTotalMoney]];
+    self.logs = [NSString stringWithFormat:@"%@\n%@",self.logs,[NSString stringWithFormat:@"优惠合计:%.2f\n",-disTotalMoney]];
+
     return -disTotalMoney;
+}
+//将日志写入txt
+//不论是创建还是写入只需调用此段代码即可 如果文件未创建 会进行创建操作
+- (void)writeToFileWithTxt:(NSString *)string{
+//    dispatch_async(dispatch_get_global_queue(0, 0), ^{
+        @synchronized (self) {
+            //获取沙盒路径
+            NSArray *paths  = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,NSUserDomainMask,YES);
+            //获取文件路径
+            NSString *theFilePath = [[paths objectAtIndex:0] stringByAppendingPathComponent:@"PreciousMetalDistributionSystem.text"];
+            NSLog(@"%@",theFilePath);
+            //创建文件管理器
+            NSFileManager *fileManager = [NSFileManager defaultManager];
+            //如果文件不存在 创建文件
+            if(![fileManager fileExistsAtPath:theFilePath]){
+                NSString *str = @"";
+                [str writeToFile:theFilePath atomically:YES encoding:NSUTF8StringEncoding error:nil];
+            }
+//            NSLog(@"所写内容=%@",string);
+            NSFileHandle *fileHandle = [NSFileHandle fileHandleForUpdatingAtPath:theFilePath];
+            [fileHandle seekToEndOfFile];  //将节点跳到文件的末尾
+            NSData* stringData  = [[NSString stringWithFormat:@"%@\n",string] dataUsingEncoding:NSUTF8StringEncoding];
+            [fileHandle writeData:stringData]; //追加写入数据
+            [fileHandle closeFile];
+        }
+//    });
 }
 @end
