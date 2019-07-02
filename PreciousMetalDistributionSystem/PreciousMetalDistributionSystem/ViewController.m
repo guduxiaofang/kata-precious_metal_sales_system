@@ -18,41 +18,32 @@ typedef enum VIPCardType {
     diamondCard//钻石卡
 } VipCardTypes;
 
-//定义枚举类型
-typedef enum favourableActivityType {
-    none,//不能使用优惠
-    foldOf95,//95折
-    foldOf90,//9折
-    fullReduction1000_10,//1000-10
-    fullReduction2000_30,//1000-10
-    fullReduction3000_350,//1000-10
-    TheThirdhalfPrice,//第三件半价
-    fullReduction4_1,//满三送一
-} favourableActivityTypes;
-
 @interface ViewController ()
 @property (nonatomic,assign) VipCardTypes type; //会员类型类型
-@property (nonatomic,assign) favourableActivityTypes favourableTType; //活动类型
 @property (nonatomic,strong)NSArray *array;//折扣数组
 @property (nonatomic,strong)NSMutableArray *dataArray;//商品数组
 @property (nonatomic,strong)NSMutableArray *payTypesArray;//支付类型数组
-@property (nonatomic,strong)UILabel *label;
 
 @end
 
 @implementation ViewController
+//初始化数组
 - (NSArray *)array {
     if (!_array) {
         self.array = [NSArray array];
     }
     return _array;
 }
+//初始化数组
+
 - (NSMutableArray *)dataArray {
     if (!_dataArray) {
         self.dataArray = [NSMutableArray array];
     }
     return _dataArray;
 }
+//初始化数组
+
 - (NSMutableArray *)payTypesArray {
     if (!_payTypesArray) {
         self.payTypesArray = [NSMutableArray array];
@@ -62,66 +53,63 @@ typedef enum favourableActivityType {
 - (void)viewDidLoad {
     [super viewDidLoad];
     // Do any additional setup after loading the view, typically from a nib.
-    self.label = [[UILabel alloc]initWithFrame:CGRectMake(20, 80, 200, 300)];
-    self.label.numberOfLines = 0;
-    [self.view addSubview:self.label];
     NSLog(@"方鼎银行贵金属购买凭证\n");
- NSDictionary *dic  = [self readLocalFileWithName:@"profile"];
-//    NSLog(@"%@",dic);
+    //读取数据
+    NSDictionary *dic  = [self readLocalFileWithName:@"profile"];
     Model *demo = [[Model alloc]init];
     [demo setValuesForKeysWithDictionary:dic];
+    //根据客户卡号获取会员信息
     vipNomalMessage *vipModel = [self messageWithMemberId:demo.memberId andIntegral:0];
     NSLog(@"\n销售单号:%@ 日期:%@\n客户卡号:%@ 会员姓名:%@ 客户等级:%@ 累计积分:%@",demo.orderId,demo.createTime,demo.memberId,vipModel.name,vipModel.vipType,vipModel.integral);
-//    NSLog(@"商品及数量          单价            金额 ");
+    NSLog(@"商品及数量          单价            金额 ");
+    //存储折扣券
     self.array = demo.discountCards;
-//    NSLog(@"%@",demo.discountCards);
-
+    //获取支付类型
     for (NSDictionary *dic in demo.payments) {
         paymentsList *model = [[paymentsList alloc]init];
         [model setValuesForKeysWithDictionary:dic];
         [self.payTypesArray addObject:model];
     }
+    //获取商品列表
     for (NSDictionary *dic in demo.items) {
         itemsList *model = [[itemsList alloc]init];
         [model setValuesForKeysWithDictionary:dic];
         [self.dataArray addObject:model];
     }
+    //计算总价
     CGFloat totalPrice = 0.00;
     for (itemsList *list in self.dataArray) {
-//     CGFloat price  = [self payMoneyThisPro:list.product withNumbers:[list.amount integerValue] andDiscountCards:self.array];
-//        NSLog(@"名称:%@优惠后价格:%.2f",[self CommodityName:list.product],price);
         NSLog(@"(%@)%@x%@,%@,%.2f\n",list.product,[self CommodityName:list.product],list.amount,[NSString stringWithFormat:@"%.2f",[self CommodityPrices:list.product]],[list.amount integerValue]*[self CommodityPrices:list.product]);
         totalPrice += [list.amount integerValue]*[self CommodityPrices:list.product];
     }
-    
     NSLog(@"合计:%.2f\n",totalPrice);
     NSLog(@"优惠清单:\n");
-    CGFloat disTotal =  [self sssssssssss:self.dataArray];
-    
+    //计算总优惠
+    CGFloat disTotal =  [self disCountTotal:self.dataArray];
     NSLog(@"应收合计:%.2f",totalPrice - disTotal);
     NSLog(@"收款:\n");
+    //输出打折券
     for (NSString *str in self.array) {
         NSLog(@"%@\n",str);
     }
-//    paymentsList *payList = [self.payTypesArray firstObject];
-//    NSLog(@"%@:%@\n",payList.type,payList.amount);
     NSLog(@"余额支付:%.2f",totalPrice - disTotal);
+    //获取商户信息
     vipNomalMessage *vipModelTwo = [self messageWithMemberId:demo.memberId andIntegral:0];
+    //获取支付总积分
     NSInteger totalInter = (totalPrice - disTotal) * [self multipleIntegralForVipType:[self frominterFor:vipModelTwo.integral]];
-    
+    //获取商户原有等级类型
     VipCardTypes typeOne = [self frominterFor:vipModelTwo.integral];
+    //更新商户积分
     vipNomalMessage *vipModelThree = [self messageWithMemberId:demo.memberId andIntegral:totalInter];
-
+    //获取商户支付完成等级类型
     VipCardTypes typeTwo = [self frominterFor:vipModelThree.integral];
     NSString *vipUpdate = @"";
-
     if (typeOne != typeTwo) {
         vipUpdate = [NSString stringWithFormat:@"恭喜您升级为%@客户!",[self vipTypeForIntegral:vipModelThree.integral]];
     }
     NSLog(@"客户等级与积分：\n新增积分:%ld\n%@",(long)totalInter,vipUpdate);
-    self.label.text = [NSString stringWithFormat:@"%.2f",totalPrice];
-    
 }
+//读取本地文件 name:文件名
 - (NSDictionary *)readLocalFileWithName:(NSString *)name {
     // 获取文件路径
     NSString *path = [[NSBundle mainBundle] pathForResource:name ofType:@"json"];
@@ -130,6 +118,7 @@ typedef enum favourableActivityType {
     // 对数据进行JSON格式化并返回字典形式
     return [NSJSONSerialization JSONObjectWithData:data options:kNilOptions error:nil];
 }
+//根据商户积分返回商户等级类型
 - (VipCardTypes )frominterFor:(NSString *)integral {
     NSInteger integ = [integral integerValue];
     if (integ < 10000) {
@@ -146,6 +135,7 @@ typedef enum favourableActivityType {
     }
     return ordinaryCard;
 }
+//根据商户等级返回积分倍数.
 - (CGFloat)multipleIntegralForVipType:(VipCardTypes )type {
     switch (type) {
         case ordinaryCard:
@@ -164,6 +154,7 @@ typedef enum favourableActivityType {
             break;
     }
 }
+//根据商品编号,返回商品价格
 - (CGFloat )CommodityPrices:(NSString *)shop {
     if ([shop isEqualToString:@"001001"]) {
         return 998.00;
@@ -188,6 +179,7 @@ typedef enum favourableActivityType {
     }
     return 0.00;
 }
+//根据商品编号,返回商品名称
 - (NSString *)CommodityName:(NSString *)shop {
     if ([shop isEqualToString:@"001001"]) {
         return @"世园会五十国钱币册";
@@ -212,6 +204,7 @@ typedef enum favourableActivityType {
     }
     return @"";
 }
+//计算每种商品的总价格
 - (CGFloat )payMoneyThisPro:(NSString *)proId withNumbers:(NSInteger )number andDiscountCards:(NSArray *)array{
     NSString *disOne,*disTwo;
     
@@ -345,6 +338,7 @@ if ([disOne isEqualToString:@"95"] || [disTwo isEqualToString:@"95"]) {
     }
     return 0.00;
 }
+//组建商户基本信息
 - (vipNomalMessage *)messageWithMemberId:(NSString *)memberId andIntegral:(NSInteger )addIntegral{
     /*
      姓名,等级,卡号,积分
@@ -377,6 +371,7 @@ if ([disOne isEqualToString:@"95"] || [disTwo isEqualToString:@"95"]) {
     }
     return model;
 }
+//根据积分返回等级汉子形式
 - (NSString *)vipTypeForIntegral:(NSString *)integral {
     NSInteger integ = [integral integerValue];
     if (integ < 10000) {
@@ -393,7 +388,8 @@ if ([disOne isEqualToString:@"95"] || [disTwo isEqualToString:@"95"]) {
     }
     return @"";
 }
-- (CGFloat )sssssssssss:(NSMutableArray *)dataArray {
+//返回所有商品优惠合计
+- (CGFloat )disCountTotal:(NSMutableArray *)dataArray {
     CGFloat disTotalMoney = 0.00;
     for (itemsList *model in dataArray) {
      
